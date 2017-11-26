@@ -1,18 +1,21 @@
-from logging import getLogger
-from typing import TYPE_CHECKING
+from logging import getLogger as _getLogger
+from typing import Optional, TYPE_CHECKING as _TYPE_CHECKING
 
-from hashdecoder.combinations import combinations
-from hashdecoder.exc import HashDecodeError
-from hashdecoder.logutil import log_same_line, log_switch
+from hashdecoder.exc import HashDecodeError as _HashDecodeError
+from hashdecoder.lib.combinations import combinations as _combinations
+from hashdecoder.lib.logutil import (
+    log_same_line as _log_same_line,
+    log_switch as _log_switch,
+)
 
-log = getLogger(__name__)
+_log = _getLogger(__name__)
 
-if TYPE_CHECKING:
-    from hashdecoder.dictionary import Dictionary
+if _TYPE_CHECKING:
+    from hashdecoder.dictionary import Dictionary as _Dictionary
 
 
 class HashDecoder:
-    def __init__(self, dictionary: 'Dictionary') -> None:
+    def __init__(self, dictionary: '_Dictionary') -> None:
         self._dictionary = dictionary
 
     def decode(self, hash_: str) -> str:
@@ -20,28 +23,29 @@ class HashDecoder:
         if lookup:
             return lookup
 
-        for permutation in combinations(self._dictionary.words,
-                                        self._dictionary.count()):
-            log_switch(
-                log,
-                info=lambda: log_same_line("Processing word: %s", permutation),
-                debug=lambda: log.debug("Processing permutation of length %s",
-                                        len(permutation)),
+        for permutation in _combinations(self._dictionary.words,
+                                         self._dictionary.count()):
+            _log_switch(
+                _log,
+                info=lambda: _log_same_line("Processing word: %s", permutation),
+                debug=lambda: _log.debug("Processing permutation of length %s",
+                                         len(permutation)),
             )
             self._dictionary.add_word(permutation)
             lookup = self._lookup(hash_)
             if lookup:
                 return lookup
-        raise HashDecodeError(hash_)
+        raise _HashDecodeError(hash_)
 
-    def _lookup(self, hash_):
+    def _lookup(self, hash_: str) -> Optional[str]:
         word = self._dictionary.lookup_hash(hash_)
         if word:
-            log_switch(
-                log,
-                debug=lambda: log.debug("Found hash '%s' in %s, maps to '%s'",
-                                        hash_, self._dictionary, word),
-                info=lambda: log.info("Found hash '%s', maps to: %s",
-                                      hash_, word)
+            _log_switch(
+                _log,
+                debug=lambda: _log.debug("Found hash '%s' in %s, maps to '%s'",
+                                         hash_, self._dictionary, word),
+                info=lambda: _log.info("Found hash '%s', maps to: %s",
+                                       hash_, word)
             )
             return word
+        return None

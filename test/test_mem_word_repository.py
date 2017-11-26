@@ -1,4 +1,4 @@
-from hashdecoder.word_repository import MemoryWordRepository
+from hashdecoder.lib.word_repository import MemoryWordRepository
 
 
 def test_mem_word_repository_yields_content():

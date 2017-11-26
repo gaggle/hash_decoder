@@ -1,8 +1,7 @@
+import sys
 from contextlib import contextmanager
 from logging import DEBUG, INFO, getLogger
 from typing import Any, Callable, Iterator, TYPE_CHECKING
-
-import sys
 
 if TYPE_CHECKING:
     import logging
@@ -31,7 +30,7 @@ def log_ctx(msg: str, *args: Any,
             print('OK')
 
 
-_LOG_MAX_LENGTH = {}
+_LOG_MAX_LENGTH: dict = {}
 
 
 def log_same_line(msg: str, *args: Any) -> None:

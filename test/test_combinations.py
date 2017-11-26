@@ -1,6 +1,6 @@
 from functools import partial
 
-from hashdecoder.combinations import combinations
+from hashdecoder.lib.combinations import combinations
 
 
 def test_combinations_yields_2_as_expected():

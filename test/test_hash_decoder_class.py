@@ -2,7 +2,7 @@ from hashlib import md5
 
 from hashdecoder.decoder import HashDecoder
 from hashdecoder.dictionary import DictionaryImpl
-from hashdecoder.word_repository import MemoryWordRepository
+from hashdecoder.lib.word_repository import MemoryWordRepository
 
 
 def to_md5(word: str) -> str:

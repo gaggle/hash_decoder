@@ -6,14 +6,14 @@ from typing import (
     Optional,
 )
 
-from hashdecoder.word_repository import WordRepository
+from hashdecoder.lib.word_repository import WordRepository
 
 log = getLogger(__name__)
 
 
 class Dictionary(ABC):
     @abstractmethod
-    def add_word(self, word) -> None:
+    def add_word(self, word: str) -> None:
         """Add word to dictionary"""
         pass
 
@@ -28,7 +28,7 @@ class Dictionary(ABC):
         pass
 
     @abstractmethod
-    def peek(self, word) -> str:
+    def peek(self, word: str) -> str:
         pass
 
     @abstractmethod
@@ -45,14 +45,14 @@ class DictionaryImpl(Dictionary):
         for word in word_repository.yield_words():
             self._add_word(word)
 
-    def add_word(self, word) -> None:
+    def add_word(self, word: str) -> None:
         log.debug("Adding word: %s", word)
         return self._add_word(word)
 
     def count(self) -> int:
         return self._word_repository.count()
 
-    def peek(self, word) -> str:
+    def peek(self, word: str) -> str:
         return _md5_encode(word)
 
     def lookup_hash(self, hash_: str) -> Optional[str]:
@@ -62,7 +62,7 @@ class DictionaryImpl(Dictionary):
         for word in self._hashes_to_words.values():
             yield word
 
-    def _add_word(self, word) -> None:
+    def _add_word(self, word: str) -> None:
         hash_ = _md5_encode(word)
         self._hashes_to_words[hash_] = word
 

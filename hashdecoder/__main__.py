@@ -4,10 +4,10 @@ from functools import partial
 from os import path
 from typing import TYPE_CHECKING
 
-from hashdecoder import logutil
 from hashdecoder.decoder import HashDecoder
 from hashdecoder.dictionary import DictionaryImpl
-from hashdecoder.word_repository import FilePathWordRepository
+from hashdecoder.lib import logutil
+from hashdecoder.lib.word_repository import FilePathWordRepository
 
 if TYPE_CHECKING:
     from argparse import Namespace
