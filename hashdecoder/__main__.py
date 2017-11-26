@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-def _parse_args() -> Namespace:
+def _parse_args() -> 'Namespace':
     def wordlist(raw_path: str) -> str:
         abspath = path.abspath(raw_path)
         if not path.isfile(abspath):
