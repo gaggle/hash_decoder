@@ -4,7 +4,6 @@ from logging import getLogger
 from typing import (
     Iterator,
     Optional,
-    Tuple,
 )
 
 from hashdecoder.word_repository import WordRepository
@@ -66,10 +65,6 @@ class DictionaryImpl(Dictionary):
     def _add_word(self, word) -> None:
         hash_ = _md5_encode(word)
         self._hashes_to_words[hash_] = word
-
-    def _mappings(self) -> Iterator[Tuple[str, str]]:
-        for hash_, word in self._hashes_to_words.items():
-            yield hash_, word
 
 
 def _md5_encode(word: str) -> str:
