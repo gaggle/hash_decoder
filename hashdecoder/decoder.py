@@ -28,12 +28,10 @@ class HashDecoder:
                 debug=lambda: log.debug("Processing permutation of length %s",
                                         len(permutation)),
             )
-            if self._dictionary.peek(permutation) == hash_:
-                return permutation
-                # self._dictionary.add_word(permutation)
-                # lookup = self._lookup(hash_)
-                # if lookup:
-                #     return lookup
+            self._dictionary.add_word(permutation)
+            lookup = self._lookup(hash_)
+            if lookup:
+                return lookup
         raise HashDecodeError(hash_)
 
     def _lookup(self, hash_):
