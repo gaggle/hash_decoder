@@ -37,7 +37,7 @@ class Dictionary(ABC):
         pass
 
 
-class DictionaryImpl(Dictionary):
+class MemDictionary(Dictionary):
     def __init__(self, word_repository: WordRepository) -> None:
         self._word_repository = word_repository
         self._hashes_to_words: dict = {}

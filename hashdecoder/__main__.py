@@ -5,7 +5,7 @@ from os import path
 from typing import TYPE_CHECKING
 
 from hashdecoder.decoder import HashDecoder
-from hashdecoder.dictionary import DictionaryImpl
+from hashdecoder.dictionary import MemDictionary
 from hashdecoder.lib import logutil
 from hashdecoder.lib.word_repository import FilePathWordRepository
 
@@ -61,7 +61,7 @@ log.debug("Log level set to: %s",
 try:
     with log_ctx("Initialising decoder"):
         decoder = HashDecoder(
-            DictionaryImpl(
+            MemDictionary(
                 FilePathWordRepository(vargs.wordlist)
             )
         )
