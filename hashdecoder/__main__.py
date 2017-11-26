@@ -2,15 +2,22 @@ import logging
 from argparse import ArgumentError, ArgumentParser
 from functools import partial
 from os import path
+from typing import TYPE_CHECKING
 
 from hashdecoder import logutil
+from hashdecoder.decoder import HashDecoder
+from hashdecoder.dictionary import DictionaryImpl
+from hashdecoder.word_repository import FilePathWordRepository
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 log = logging.getLogger(__name__)
 
 
-def _parse_args():
-    def wordlist(value):
-        abspath = path.abspath(value)
+def _parse_args() -> Namespace:
+    def wordlist(raw_path: str) -> str:
+        abspath = path.abspath(raw_path)
         if not path.isfile(abspath):
             raise ArgumentError("Not a valid file")
         return abspath
@@ -51,13 +58,21 @@ else:
 log.debug("Log level set to: %s",
           logging.getLevelName(log.getEffectiveLevel()))
 
-with log_ctx("Initialising decoder"):
-    pass
+try:
+    with log_ctx("Initialising decoder"):
+        decoder = HashDecoder(
+            DictionaryImpl(
+                FilePathWordRepository(vargs.wordlist)
+            )
+        )
 
-with log_ctx("Decoding hash %s", vargs.hash):
-    decoded_hash = 'not-implemented'
+    with log_ctx("Decoding hash %s", vargs.hash):
+        decoded_hash = decoder.decode(vargs.hash)
 
-if vargs.quiet:
-    print(decoded_hash)
-else:
-    print("Decoded hash {} to: {}".format(vargs.hash, decoded_hash))
+    if vargs.quiet:
+        print(decoded_hash)
+    else:
+        print("Decoded hash {} to: {}".format(vargs.hash, decoded_hash))
+except KeyboardInterrupt as ex:
+    print("Quit")
+    exit(1)
