@@ -1,3 +1,4 @@
 .cache
 .idea
 .mypy_cache
+db.sqlite
