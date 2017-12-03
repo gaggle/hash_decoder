@@ -4,10 +4,10 @@ from typing import Iterator, TYPE_CHECKING
 
 from pytest import mark
 
-from hashdecoder.dictionary import DBDictionary, MemDictionary
+from hashdecoder.lib.dictionary import DBDictionary, MemDictionary
 
 if TYPE_CHECKING:
-    from hashdecoder.dictionary import Dictionary
+    from hashdecoder.lib.dictionary import Dictionary
 
 
 def get_db():

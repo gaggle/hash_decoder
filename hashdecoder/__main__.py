@@ -5,10 +5,11 @@ from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING
 
-from hashdecoder.decoder import HashDecoder
-from hashdecoder.dictionary import DBDictionary
+from hashdecoder.lib.dictionary import DBDictionary
+
 from hashdecoder.exc import HashDecodeError
 from hashdecoder.lib import logutil
+from hashdecoder.lib.decoder import HashDecoder
 from hashdecoder.lib.fileutils import seek_at
 from hashdecoder.lib.hashutil import md5_encode
 from hashdecoder.lib.logutil import log_me, print_progress
@@ -162,21 +163,28 @@ _processors = {
     CmdType.hash: process_hash,
 }
 
-if __name__ == '__main__':
-    vargs = _parse_args()
-    log_ctx = partial(logutil.log_ctx, quiet=vargs.quiet,
-                      verbose=vargs.verbosity)
-    _configure_logging(vargs.verbosity)
 
-    db = sqlite3.connect('db.sqlite')
+def main(args):
+    _configure_logging(args.verbosity)
+
     try:
-        cmd = _processors[CmdType[vargs.cmd]]
-        cmd(vargs)
+        cmd = _processors[CmdType[args.cmd]]
+        cmd(args)
     except KeyboardInterrupt as ex:
         print("Exiting")
         exit(2)
     except HashDecodeError as ex:
         print(ex)
         exit(1)
+
+
+if __name__ == '__main__':
+    vargs = _parse_args()
+
+    log_ctx = partial(logutil.log_ctx, quiet=vargs.quiet,
+                      verbose=vargs.verbosity)
+    db = sqlite3.connect('db.sqlite')
+    try:
+        main(vargs)
     finally:
         db.close()

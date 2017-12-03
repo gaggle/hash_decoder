@@ -1,7 +1,7 @@
 from hashlib import md5
 
-from hashdecoder.decoder import HashDecoder
-from hashdecoder.dictionary import MemDictionary
+from hashdecoder.lib.decoder import HashDecoder
+from hashdecoder.lib.dictionary import MemDictionary
 
 
 def to_md5(word: str) -> str:
@@ -15,7 +15,6 @@ def test_decodes_trivial_lookup():
 
 def test_can_decode_2_permutation():
     decoder = HashDecoder(MemDictionary(['a', 'b', 'c']))
-
     assert decoder.decode(to_md5('a b')) == 'a b'
 
 

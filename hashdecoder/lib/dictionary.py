@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from logging import getLogger
 
-from hashdecoder.custom_types import hash_type, iterator_or_sequence_type
 from hashdecoder.lib.hashutil import md5_encode
+from hashdecoder.lib.types import hash_type, iterator_or_sequence_type
 
 if typing.TYPE_CHECKING:
     import sqlite3

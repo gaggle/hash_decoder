@@ -1,18 +1,18 @@
 from logging import getLogger as _getLogger
 from typing import Optional, TYPE_CHECKING as _TYPE_CHECKING
 
-from hashdecoder.custom_types import hash_type
 from hashdecoder.exc import HashDecodeError as _HashDecodeError
 from hashdecoder.lib.combinations import combinations as _combinations
 from hashdecoder.lib.logutil import (
     log_same_line as _log_same_line,
     log_switch as _log_switch,
 )
+from hashdecoder.lib.types import hash_type
 
 _log = _getLogger(__name__)
 
 if _TYPE_CHECKING:
-    from hashdecoder.dictionary import Dictionary as _Dictionary
+    from hashdecoder.lib.dictionary import Dictionary as _Dictionary
 
 
 class HashDecoder:
