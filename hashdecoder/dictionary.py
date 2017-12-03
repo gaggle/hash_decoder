@@ -1,10 +1,12 @@
+import typing
 from abc import ABC, abstractmethod
 from enum import Enum
-from hashlib import md5
 from logging import getLogger
-from typing import Iterator, Optional, TYPE_CHECKING
 
-if TYPE_CHECKING:
+from hashdecoder.custom_types import hash_type, iterator_or_sequence_type
+from hashdecoder.lib.hashutil import md5_encode
+
+if typing.TYPE_CHECKING:
     import sqlite3
 log = getLogger(__name__)
 
@@ -31,37 +33,42 @@ class Dictionary(ABC):
         pass
 
     @abstractmethod
-    def lookup_hash(self, hash_: str) -> Optional[str]:
+    def lookup_hash(self, hash_: hash_type) -> typing.Optional[str]:
         """Return word that corresponds to hash"""
         pass
 
     @abstractmethod
-    def lookup_word(self, word: str) -> Optional[str]:
+    def lookup_word(self, word: str) -> typing.Optional[hash_type]:
         """Return hash that corresponds to word"""
         pass
 
     @abstractmethod
-    def yield_all(self) -> Iterator[str]:
+    def yield_all(self) -> typing.Iterator[str]:
         """Iterate through all words"""
         pass
 
     @abstractmethod
-    def yield_words(self) -> Iterator[str]:
+    def yield_words(self) -> typing.Iterator[str]:
         """Iterate through words"""
         pass
 
 
 class MemDictionary(Dictionary):
-    def __init__(self, words: Iterator = ()) -> None:
+    def __init__(self, words: iterator_or_sequence_type = ()) -> None:
         self._words: dict = {}
         self._permutations: dict = {}
-        [self.add_word(w) for w in words]
+        for word in words:
+            self.add_word(word)
 
     def add_permutation(self, word: str) -> None:
-        self._permutations[_md5_encode(word)] = word
+        word = _sanitise_word(word)
+        if self.lookup_word(word) is not None:
+            return
+        self._permutations[md5_encode(word)] = word
 
     def add_word(self, word: str) -> None:
-        self._words[_md5_encode(word)] = word
+        word = _sanitise_word(word)
+        self._words[md5_encode(word)] = word
 
     def count_permutations(self) -> int:
         return len(self._permutations.keys())
@@ -69,22 +76,23 @@ class MemDictionary(Dictionary):
     def count_words(self) -> int:
         return len(self._words.keys())
 
-    def lookup_hash(self, hash_: str) -> Optional[str]:
+    def lookup_hash(self, hash_: hash_type) -> typing.Optional[str]:
         entries = {**self._permutations, **self._words}
         return entries.get(hash_)
 
-    def lookup_word(self, word: str) -> Optional[str]:
+    def lookup_word(self, word: str) -> typing.Optional[hash_type]:
         entries = {**self._permutations, **self._words}
         for h, w in entries.items():
             if w == word:
                 return h
+        return None
 
-    def yield_all(self) -> Iterator[str]:
-        entries = {**self._permutations, **self._words}
+    def yield_all(self) -> typing.Iterator[str]:
+        entries = {**self._words, **self._permutations}
         for word in entries.values():
             yield word
 
-    def yield_words(self) -> Iterator[str]:
+    def yield_words(self) -> typing.Iterator[str]:
         for word in self._words.values():
             yield word
 
@@ -105,13 +113,21 @@ class DBDictionary(Dictionary):
         ''')
         db.commit()
 
+    def drop(self):
+        for table in ['words', 'permutations']:
+            self._db.executescript('drop table if exists {}'.format(table))
+
     def add_permutation(self, word: str) -> None:
+        word = _sanitise_word(word)
+        if self.lookup_word(word) is not None:
+            return
         cursor = self._db.cursor()
-        log.debug("Adding permutation: %s", word)
+        log.debug("Adding permutation: '%s'", word)
         self._add(cursor, word, self.Table.permutations)
         self._db.commit()
 
     def add_word(self, word: str) -> None:
+        word = _sanitise_word(word)
         cursor = self._db.cursor()
         log.debug("Adding word: %s", word)
         self._add(cursor, word, self.Table.words)
@@ -127,7 +143,7 @@ class DBDictionary(Dictionary):
         self._count(cursor, self.Table.words)
         return cursor.fetchone()[0]
 
-    def lookup_hash(self, hash_: str) -> Optional[str]:
+    def lookup_hash(self, hash_: str) -> typing.Optional[str]:
         cursor = self._db.cursor()
         cursor.execute(
             'SELECT word FROM words WHERE hash LIKE ? '
@@ -137,7 +153,7 @@ class DBDictionary(Dictionary):
         fetchone = cursor.fetchone()
         return fetchone[0] if fetchone else fetchone
 
-    def lookup_word(self, word: str) -> Optional[str]:
+    def lookup_word(self, word: str) -> typing.Optional[str]:
         cursor = self._db.cursor()
         cursor.execute(
             'SELECT hash FROM words WHERE word LIKE ? '
@@ -147,20 +163,20 @@ class DBDictionary(Dictionary):
         fetchone = cursor.fetchone()
         return fetchone[0] if fetchone else fetchone
 
-    def yield_all(self) -> Iterator[str]:
+    def yield_all(self) -> typing.Iterator[str]:
         for row in self._db.cursor().execute(
                 'SELECT word FROM words '
                 'UNION '
-                'SELECT word FROM permutations'):
+                'SELECT word FROM permutations ORDER BY word DESC'):
             yield row[0]
 
-    def yield_words(self) -> Iterator[str]:
+    def yield_words(self) -> typing.Iterator[str]:
         for row in self._db.cursor().execute('SELECT word FROM words'):
             yield row[0]
 
     def _add(self, cursor: 'sqlite3.Cursor', word: str,
              table: Table) -> None:
-        hash_ = _md5_encode(word)
+        hash_ = md5_encode(word)
         table_name = self.Table[table.name].name
         query = '''INSERT OR IGNORE INTO {} (hash, word) VALUES (?, ?)'''.format(
             table_name)
@@ -173,9 +189,9 @@ class DBDictionary(Dictionary):
         cursor.execute(query)
 
 
-def _flatten(iterator: Iterator) -> list:
+def _flatten(iterator: typing.Iterator) -> list:
     return [item for sublist in iterator for item in sublist]
 
 
-def _md5_encode(word: str) -> str:
-    return md5(word.encode('utf-8')).hexdigest()
+def _sanitise_word(word: str) -> str:
+    return word.strip()

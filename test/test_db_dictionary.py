@@ -1,6 +1,6 @@
 from hashlib import md5
 from sqlite3 import connect
-from typing import TYPE_CHECKING
+from typing import Iterator, TYPE_CHECKING
 
 from pytest import mark
 
@@ -27,9 +27,25 @@ def test_add_permutation(dictionary: 'Dictionary'):
 
 
 @parametrize_dictionaries(get_db())
+def test_add_permutation_is_noop_if_word_exists(dictionary: 'Dictionary'):
+    dictionary.add_word('foo')
+    dictionary.add_permutation('foo')
+    assert list(dictionary.yield_all()) == ['foo']
+    assert dictionary.count_words() == 1
+    assert dictionary.count_permutations() == 0
+
+
+@parametrize_dictionaries(get_db())
 def test_add_word(dictionary: 'Dictionary'):
     dictionary.add_word('foo')
     dictionary.add_word('bar')
+    assert sorted(dictionary.yield_all()) == ['bar', 'foo']
+
+
+@parametrize_dictionaries(get_db())
+def test_added_words_are_sanitised(dictionary: 'Dictionary'):
+    dictionary.add_word('\nfoo\n')
+    dictionary.add_permutation('\nbar\n')
     assert sorted(dictionary.yield_all()) == ['bar', 'foo']
 
 
@@ -65,29 +81,20 @@ def test_lookup_word(dictionary: 'Dictionary'):
     assert dictionary.lookup_word('bar') == to_md5('bar')
 
 
-# def test_yield_words(db):
-#     cursor = db.cursor()
-#     cursor.execute(
-#         '''INSERT INTO words (hash, word) VALUES (?, ?)''', ('1234', 'foo'))
-#     cursor.execute(
-#         '''INSERT INTO permutations (hash, word) VALUES (?, ?)''',
-#         ('2345', 'bar'))
-#     d = DBDictionary(db)
-#     assert isinstance(d.yield_words(), Iterator)
-#     assert tuple(d.yield_words()) == ('foo',)
-#
-#
-# def test_yield_all(db):
-#     cursor = db.cursor()
-#     cursor.execute(
-#         '''INSERT INTO words (hash, word) VALUES (?, ?)''',
-#         ('1234', 'foo'))
-#     cursor.execute(
-#         '''INSERT INTO permutations (hash, word) VALUES (?, ?)''',
-#         ('2345', 'bar'))
-#     d = DBDictionary(db)
-#     assert isinstance(d.yield_all(), Iterator)
-#     assert tuple(d.yield_all()) == ('foo', 'bar')
+@parametrize_dictionaries(get_db())
+def test_yield_words(dictionary: 'Dictionary'):
+    dictionary.add_word('foo')
+    dictionary.add_permutation('bar')
+    assert isinstance(dictionary.yield_words(), Iterator)
+    assert tuple(dictionary.yield_words()) == ('foo',)
+
+
+@parametrize_dictionaries(get_db())
+def test_yield_all(dictionary: 'Dictionary'):
+    dictionary.add_word('foo')
+    dictionary.add_permutation('bar')
+    assert isinstance(dictionary.yield_all(), Iterator)
+    assert tuple(dictionary.yield_all()) == ('foo', 'bar')
 
 
 def _get_words(db):

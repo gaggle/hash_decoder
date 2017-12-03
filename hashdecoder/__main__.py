@@ -7,10 +7,13 @@ from typing import TYPE_CHECKING
 
 from hashdecoder.decoder import HashDecoder
 from hashdecoder.dictionary import DBDictionary
+from hashdecoder.exc import HashDecodeError
 from hashdecoder.lib import logutil
+from hashdecoder.lib.fileutils import seek_at
+from hashdecoder.lib.hashutil import md5_encode
+from hashdecoder.lib.logutil import log_me, print_progress
 
 if TYPE_CHECKING:
-    from hashdecoder.dictionary import Dictionary
     from argparse import Namespace
 
 log = logging.getLogger(__name__)
@@ -37,12 +40,12 @@ def _parse_args() -> 'Namespace':
     parser = ArgumentParser()
 
     cmds_parsers = parser.add_subparsers(dest='cmd')
-    cmds_parsers.required = True
+    cmds_parsers.required = True  # type: ignore
 
     db_parser = cmds_parsers.add_parser(
         CmdType.db.name, help='database operations')
     db_cmds_parsers = db_parser.add_subparsers(dest='db_cmd')
-    db_cmds_parsers.required = True
+    db_cmds_parsers.required = True  # type: ignore
 
     db_load_parser = db_cmds_parsers.add_parser(
         'load', help='append words to database')
@@ -90,7 +93,7 @@ def _configure_logging(verbosity: int) -> None:
               logging.getLevelName(log.getEffectiveLevel()))
 
 
-def _get_dictionary() -> 'Dictionary':
+def _get_dictionary() -> 'DBDictionary':
     dictionary = DBDictionary(db)
     words = dictionary.count_words()
     permutations = dictionary.count_permutations()
@@ -100,26 +103,37 @@ def _get_dictionary() -> 'Dictionary':
     return dictionary
 
 
+@log_me
 def process_db(args: 'Namespace') -> None:
     with log_ctx("Loading dictionary"):
         dictionary = _get_dictionary()
 
     if args.db_cmd == 'wipe':
-        input("Wiping database, press Enter to continue...")
-        db.executescript('drop table if exists words')
+        input("About to wipe database, press Enter to continue...")
+        dictionary.drop()
         return
 
     if args.db_cmd == 'count':
-        print("{} entries".format(dictionary.count()))
+        words = dictionary.count_words()
+        permutations = dictionary.count_permutations()
+        total = words + permutations
+        print(
+            "Dictionary contains {words} words, "
+            "{permutations} permutations, "
+            "total {total} entries".format(
+                **locals())
+        )
         return
 
-    with log_ctx("Adding data from %s", args.wordlist.name):
-        for word in args.wordlist:
-            print(word)
-            # for word in BufferWordRepository(args.wordlist).yield_words():
-            #     dictionary.add_word(word)
+    if args.db_cmd == 'load':
+        file = args.wordlist
+        with seek_at(file, 0) as f:
+            length = len(f.readlines())
+        print_progress(file.readlines(), dictionary.add_word, length,
+                       prefix='Loading words')
 
 
+@log_me
 def process_decode(args: 'Namespace') -> None:
     with log_ctx("Loading dictionary"):
         dictionary = _get_dictionary()
@@ -133,17 +147,13 @@ def process_decode(args: 'Namespace') -> None:
     if args.quiet:
         print(decoded_hash)
     else:
-        print("Decoded hash {} to: {}".format(args.hash, decoded_hash))
+        print("Decoded hash to: {}".format(decoded_hash))
 
 
+@log_me
 def process_hash(args: 'Namespace') -> None:
-    with log_ctx("Loading dictionary"):
-        dictionary = _get_dictionary()
-
     word = ' '.join(args.word)
-    if not dictionary.lookup_hash(word):
-        dictionary.add_permutation(word)
-    print(dictionary.lookup_hash(word))
+    print(md5_encode(word))
 
 
 _processors = {
@@ -160,11 +170,13 @@ if __name__ == '__main__':
 
     db = sqlite3.connect('db.sqlite')
     try:
-        _get_dictionary()
         cmd = _processors[CmdType[vargs.cmd]]
         cmd(vargs)
     except KeyboardInterrupt as ex:
         print("Exiting")
+        exit(2)
+    except HashDecodeError as ex:
+        print(ex)
         exit(1)
     finally:
         db.close()

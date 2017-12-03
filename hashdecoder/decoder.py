@@ -1,6 +1,7 @@
 from logging import getLogger as _getLogger
 from typing import Optional, TYPE_CHECKING as _TYPE_CHECKING
 
+from hashdecoder.custom_types import hash_type
 from hashdecoder.exc import HashDecodeError as _HashDecodeError
 from hashdecoder.lib.combinations import combinations as _combinations
 from hashdecoder.lib.logutil import (
@@ -18,20 +19,20 @@ class HashDecoder:
     def __init__(self, dictionary: '_Dictionary') -> None:
         self._dictionary = dictionary
 
-    def decode(self, hash_: str) -> str:
+    def decode(self, hash_: hash_type) -> str:
         lookup = self._lookup(hash_)
         if lookup:
             return lookup
 
-        for permutation in _combinations(self._dictionary.words,
-                                         self._dictionary.count()):
+        for permutation in _combinations(self._dictionary.yield_words,
+                                         self._dictionary.count_words()):
             _log_switch(
                 _log,
                 info=lambda: _log_same_line("Processing word: %s", permutation),
-                debug=lambda: _log.debug("Processing permutation of length %s",
-                                         len(permutation)),
+                debug=lambda: _log.debug("Processing permutation: %s",
+                                         permutation),
             )
-            self._dictionary.add_word(permutation)
+            self._dictionary.add_permutation(permutation)
             lookup = self._lookup(hash_)
             if lookup:
                 return lookup
@@ -47,5 +48,4 @@ class HashDecoder:
                 info=lambda: _log.info("Found hash '%s', maps to: %s",
                                        hash_, word)
             )
-            return word
-        return None
+        return word
