@@ -53,6 +53,10 @@ def _parse_args() -> 'Namespace':
     db_load_parser.add_argument(
         'wordlist', type=FileType('r'),
         help='path to new-line delimited list of words')
+    db_load_parser.add_argument(
+        '--hint', type=str, nargs='+',
+        help='anagram of solution, to speed up computations'
+    )
     add_flags(db_load_parser)
 
     db_count_parser = db_cmds_parsers.add_parser(
@@ -68,7 +72,7 @@ def _parse_args() -> 'Namespace':
     decode_parser.add_argument('hash', type=str, help='hash to decode')
     decode_parser.add_argument(
         '--hint', type=str, nargs='+',
-        help='anagram of solution, speeds up computation'
+        help='anagram of solution, to speed up computations'
     )
     add_flags(decode_parser, quiet="only output decoded hash")
 
@@ -84,7 +88,7 @@ def _parse_args() -> 'Namespace':
         setattr(args, 'quiet', False)
     if not hasattr(args, 'verbosity'):
         setattr(args, 'verbosity', 0)
-    if hasattr(args, 'hint'):
+    if hasattr(args, 'hint') and args.hint:
         args.hint = ' '.join(args.hint)
     if hasattr(args, 'word'):
         args.word = ' '.join(args.word)
@@ -135,11 +139,22 @@ def process_db(args: 'Namespace') -> None:
         return
 
     if args.db_cmd == DBCmdType.load.name:
+
         file = args.wordlist
         with seek_at(file, 0) as f:
             length = len(f.readlines())
-        print_progress(file.readlines(), dictionary.add_word, length,
-                       prefix='Loading words')
+
+        valid_chars = set(args.hint or [])
+        valid_chars.remove(' ')
+
+        def filtered_line_entries():
+            for entry in file.readlines():
+                if any((c in valid_chars) for c in entry):
+                    yield entry
+
+        print_progress(filtered_line_entries(),
+                       dictionary.add_word,
+                       length, prefix='Loading words')
 
 
 @log_me
