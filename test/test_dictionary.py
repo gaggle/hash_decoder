@@ -1,25 +1,9 @@
-from hashlib import md5
-from sqlite3 import connect
 from typing import Iterator, TYPE_CHECKING
 
-from pytest import mark
-
-from hashdecoder.lib.dictionary import DBDictionary, MemDictionary
+from test.helpers import get_db, parametrize_dictionaries, to_md5
 
 if TYPE_CHECKING:
     from hashdecoder.lib.dictionary import Dictionary
-
-
-def get_db():
-    return connect(":memory:")
-
-
-def parametrize_dictionaries(db):
-    return mark.parametrize(
-        "dictionary",
-        [(DBDictionary(db)), (MemDictionary())],
-        ids=lambda x: type(x).__name__
-    )
 
 
 @parametrize_dictionaries(get_db())
@@ -126,7 +110,3 @@ def _get_permutations(db):
     cursor = db.cursor()
     cursor.execute('''SELECT word FROM permutations''')
     return tuple(sorted(e[0] for e in cursor.fetchall()))
-
-
-def to_md5(word: str) -> str:
-    return md5(word.encode('utf-8')).hexdigest()
