@@ -14,9 +14,12 @@ def get_db():
     return connect(":memory:")
 
 
-parametrize_dictionaries = lambda db: mark.parametrize("dictionary", [
-    (DBDictionary(db)), (MemDictionary())
-], ids=lambda x: type(x).__name__)
+def parametrize_dictionaries(db):
+    return mark.parametrize(
+        "dictionary",
+        [(DBDictionary(db)), (MemDictionary())],
+        ids=lambda x: type(x).__name__
+    )
 
 
 @parametrize_dictionaries(get_db())
