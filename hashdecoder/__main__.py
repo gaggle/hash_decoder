@@ -5,11 +5,10 @@ from enum import Enum
 from functools import partial
 from typing import TYPE_CHECKING
 
-from hashdecoder.lib.dictionary import DBDictionary
-
 from hashdecoder.exc import HashDecodeError
 from hashdecoder.lib import logutil
 from hashdecoder.lib.decoder import HashDecoder
+from hashdecoder.lib.dictionary import DBDictionary
 from hashdecoder.lib.fileutils import seek_at
 from hashdecoder.lib.hashutil import md5_encode
 from hashdecoder.lib.logutil import log_me, print_progress
@@ -20,15 +19,16 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 CmdType = Enum('CmdType', 'db decode hash')
+DBCmdType = Enum('DBCmdType', 'count load wipe')
 
 
 def _parse_args() -> 'Namespace':
-    def add_flags(p: ArgumentParser, q: str = None) -> None:
-        if q:
+    def add_flags(p: ArgumentParser, quiet: str = None) -> None:
+        if quiet:
             p.add_argument(
-                "-q", "--quiet",
+                "-quiet", "--quiet",
                 action="store_true",
-                help=q,
+                help=quiet,
             )
 
         p.add_argument(
@@ -49,24 +49,28 @@ def _parse_args() -> 'Namespace':
     db_cmds_parsers.required = True  # type: ignore
 
     db_load_parser = db_cmds_parsers.add_parser(
-        'load', help='append words to database')
+        DBCmdType.load.name, help='append words to database')
     db_load_parser.add_argument(
         'wordlist', type=FileType('r'),
         help='path to new-line delimited list of words')
     add_flags(db_load_parser)
 
     db_count_parser = db_cmds_parsers.add_parser(
-        'count', help='display number of entries in database')
+        DBCmdType.count.name, help='display number of entries in database')
     add_flags(db_count_parser)
 
     db_wipe_parser = db_cmds_parsers.add_parser(
-        'wipe', help='wipe words in database')
+        DBCmdType.wipe.name, help='wipe words in database')
     add_flags(db_wipe_parser)
 
     decode_parser = cmds_parsers.add_parser(
         CmdType.decode.name, help='decode a hash')
     decode_parser.add_argument('hash', type=str, help='hash to decode')
-    add_flags(decode_parser, "only output decoded hash")
+    decode_parser.add_argument(
+        '--hint', type=str, nargs='+',
+        help='anagram of solution, speeds up computation'
+    )
+    add_flags(decode_parser, quiet="only output decoded hash")
 
     hash_parser = cmds_parsers.add_parser(
         CmdType.hash.name, help='hash a word')
@@ -80,6 +84,10 @@ def _parse_args() -> 'Namespace':
         setattr(args, 'quiet', False)
     if not hasattr(args, 'verbosity'):
         setattr(args, 'verbosity', 0)
+    if hasattr(args, 'hint'):
+        args.hint = ' '.join(args.hint)
+    if hasattr(args, 'word'):
+        args.word = ' '.join(args.word)
     return args
 
 
@@ -109,12 +117,12 @@ def process_db(args: 'Namespace') -> None:
     with log_ctx("Loading dictionary"):
         dictionary = _get_dictionary()
 
-    if args.db_cmd == 'wipe':
+    if args.db_cmd == DBCmdType.wipe.name:
         input("About to wipe database, press Enter to continue...")
         dictionary.drop()
         return
 
-    if args.db_cmd == 'count':
+    if args.db_cmd == DBCmdType.count.name:
         words = dictionary.count_words()
         permutations = dictionary.count_permutations()
         total = words + permutations
@@ -126,7 +134,7 @@ def process_db(args: 'Namespace') -> None:
         )
         return
 
-    if args.db_cmd == 'load':
+    if args.db_cmd == DBCmdType.load.name:
         file = args.wordlist
         with seek_at(file, 0) as f:
             length = len(f.readlines())
@@ -143,7 +151,7 @@ def process_decode(args: 'Namespace') -> None:
         decoder = HashDecoder(dictionary)
 
     with log_ctx("Decoding hash %s", args.hash):
-        decoded_hash = decoder.decode(args.hash)
+        decoded_hash = decoder.decode(args.hash, hint=args.hint)
 
     if args.quiet:
         print(decoded_hash)
@@ -153,8 +161,7 @@ def process_decode(args: 'Namespace') -> None:
 
 @log_me
 def process_hash(args: 'Namespace') -> None:
-    word = ' '.join(args.word)
-    print(md5_encode(word))
+    print(md5_encode(args.word))
 
 
 _processors = {

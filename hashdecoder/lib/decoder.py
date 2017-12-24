@@ -1,10 +1,11 @@
+from functools import partial
 from logging import getLogger as _getLogger
-from typing import Optional, TYPE_CHECKING as _TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING as _TYPE_CHECKING
 
 from hashdecoder.exc import HashDecodeError as _HashDecodeError
 from hashdecoder.lib.combinations import combinations as _combinations
 from hashdecoder.lib.logutil import (
-    log_same_line as _log_same_line,
+    log_me, log_same_line as _log_same_line,
     log_switch as _log_switch,
 )
 from hashdecoder.lib.types import hash_type
@@ -19,13 +20,23 @@ class HashDecoder:
     def __init__(self, dictionary: '_Dictionary') -> None:
         self._dictionary = dictionary
 
-    def decode(self, hash_: hash_type) -> str:
+    @log_me
+    def decode(self, hash_: hash_type,
+               hint: Optional[str] = None) -> str:
+        return self._decode(hash_, _combinations, hint)
+
+    def _decode(self, hash_: hash_type, get_combinations: Callable,
+                hint: Optional[str] = None):
         lookup = self._lookup(hash_)
         if lookup:
             return lookup
 
-        for permutation in _combinations(self._dictionary.yield_words,
-                                         self._dictionary.count_words()):
+        _log.debug("Decoding %s (hint: %s)", hash_, hint)
+
+        yield_words = partial(self._dictionary.yield_words, hint=hint)
+        for permutation in get_combinations(yield_words,
+                                            self._dictionary.count_words()):
+
             _log_switch(
                 _log,
                 info=lambda: _log_same_line("Processing word: %s", permutation),

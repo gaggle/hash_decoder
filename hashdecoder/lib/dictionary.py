@@ -13,7 +13,6 @@ log = getLogger(__name__)
 
 class Dictionary(ABC):
     @abstractmethod
-    @abstractmethod
     def add_permutation(self, word: str) -> None:
         """Add word-permutation to dictionary"""
         pass
@@ -48,7 +47,10 @@ class Dictionary(ABC):
         pass
 
     @abstractmethod
-    def yield_words(self) -> typing.Iterator[str]:
+    def yield_words(
+            self,
+            hint: typing.Optional[str] = None
+    ) -> typing.Iterator[str]:
         """Iterate through words"""
         pass
 
@@ -92,8 +94,14 @@ class MemDictionary(Dictionary):
         for word in entries.values():
             yield word
 
-    def yield_words(self) -> typing.Iterator[str]:
+    def yield_words(
+            self,
+            hint: typing.Optional[str] = None
+    ) -> typing.Iterator[str]:
+
         for word in self._words.values():
+            if hint and not any(c in word for c in hint):
+                continue
             yield word
 
 
@@ -170,8 +178,16 @@ class DBDictionary(Dictionary):
                 'SELECT word FROM permutations ORDER BY word DESC'):
             yield row[0]
 
-    def yield_words(self) -> typing.Iterator[str]:
-        for row in self._db.cursor().execute('SELECT word FROM words'):
+    def yield_words(
+            self,
+            hint: typing.Optional[str] = None
+    ) -> typing.Iterator[str]:
+        query = "SELECT word FROM words"
+        if hint:
+            query += " WHERE word LIKE '%{}%'".format(hint[0])
+            query += "".join(
+                [" OR word LIKE '%{}%'".format(s) for s in hint[1:]])
+        for row in self._db.cursor().execute(query):
             yield row[0]
 
     def _add(self, cursor: 'sqlite3.Cursor', word: str,
