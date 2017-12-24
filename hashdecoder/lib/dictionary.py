@@ -1,12 +1,12 @@
-import typing
 from abc import ABC, abstractmethod
 from enum import Enum
 from logging import getLogger
+from typing import Iterator, Optional, TYPE_CHECKING
 
 from hashdecoder.lib.hashutil import md5_encode
 from hashdecoder.lib.types import hash_type, iterator_or_sequence_type
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     import sqlite3
 log = getLogger(__name__)
 
@@ -32,25 +32,25 @@ class Dictionary(ABC):
         pass
 
     @abstractmethod
-    def lookup_hash(self, hash_: hash_type) -> typing.Optional[str]:
+    def lookup_hash(self, hash_: hash_type) -> Optional[str]:
         """Return word that corresponds to hash"""
         pass
 
     @abstractmethod
-    def lookup_word(self, word: str) -> typing.Optional[hash_type]:
+    def lookup_word(self, word: str) -> Optional[hash_type]:
         """Return hash that corresponds to word"""
         pass
 
     @abstractmethod
-    def yield_all(self) -> typing.Iterator[str]:
+    def yield_all(self) -> Iterator[str]:
         """Iterate through all words"""
         pass
 
     @abstractmethod
     def yield_words(
             self,
-            hint: typing.Optional[str] = None
-    ) -> typing.Iterator[str]:
+            hint: Optional[str] = None
+    ) -> Iterator[str]:
         """Iterate through words"""
         pass
 
@@ -78,26 +78,26 @@ class MemDictionary(Dictionary):
     def count_words(self) -> int:
         return len(self._words.keys())
 
-    def lookup_hash(self, hash_: hash_type) -> typing.Optional[str]:
+    def lookup_hash(self, hash_: hash_type) -> Optional[str]:
         entries = {**self._permutations, **self._words}
         return entries.get(hash_)
 
-    def lookup_word(self, word: str) -> typing.Optional[hash_type]:
+    def lookup_word(self, word: str) -> Optional[hash_type]:
         entries = {**self._permutations, **self._words}
         for h, w in entries.items():
             if w == word:
                 return h
         return None
 
-    def yield_all(self) -> typing.Iterator[str]:
+    def yield_all(self) -> Iterator[str]:
         entries = {**self._words, **self._permutations}
         for word in entries.values():
             yield word
 
     def yield_words(
             self,
-            hint: typing.Optional[str] = None
-    ) -> typing.Iterator[str]:
+            hint: Optional[str] = None
+    ) -> Iterator[str]:
 
         for word in self._words.values():
             if hint and not any(c in word for c in hint):
@@ -151,7 +151,7 @@ class DBDictionary(Dictionary):
         self._count(cursor, self.Table.words)
         return cursor.fetchone()[0]
 
-    def lookup_hash(self, hash_: str) -> typing.Optional[str]:
+    def lookup_hash(self, hash_: str) -> Optional[str]:
         cursor = self._db.cursor()
         cursor.execute(
             'SELECT word FROM words WHERE hash LIKE ? '
@@ -161,7 +161,7 @@ class DBDictionary(Dictionary):
         fetchone = cursor.fetchone()
         return fetchone[0] if fetchone else fetchone
 
-    def lookup_word(self, word: str) -> typing.Optional[str]:
+    def lookup_word(self, word: str) -> Optional[str]:
         cursor = self._db.cursor()
         cursor.execute(
             'SELECT hash FROM words WHERE word LIKE ? '
@@ -171,7 +171,7 @@ class DBDictionary(Dictionary):
         fetchone = cursor.fetchone()
         return fetchone[0] if fetchone else fetchone
 
-    def yield_all(self) -> typing.Iterator[str]:
+    def yield_all(self) -> Iterator[str]:
         for row in self._db.cursor().execute(
                 'SELECT word FROM words '
                 'UNION '
@@ -180,8 +180,8 @@ class DBDictionary(Dictionary):
 
     def yield_words(
             self,
-            hint: typing.Optional[str] = None
-    ) -> typing.Iterator[str]:
+            hint: Optional[str] = None
+    ) -> Iterator[str]:
         query = "SELECT word FROM words"
         if hint:
             query += " WHERE word LIKE '%{}%'".format(hint[0])
@@ -205,7 +205,7 @@ class DBDictionary(Dictionary):
         cursor.execute(query)
 
 
-def _flatten(iterator: typing.Iterator) -> list:
+def _flatten(iterator: Iterator) -> list:
     return [item for sublist in iterator for item in sublist]
 
 
