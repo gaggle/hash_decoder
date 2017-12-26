@@ -1,6 +1,5 @@
 import datetime as _datetime
 import functools as _functools
-import inspect as _inspect
 import logging as _logging
 import typing as _typing
 
@@ -46,10 +45,6 @@ def log_entry_and_exit(log_callable: _typing.Callable):
         return wrapped
 
     return decorator
-
-
-def whoami():
-    return _inspect.getouterframes(_inspect.currentframe())[1].function
 
 
 @_throttle(1)

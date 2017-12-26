@@ -17,25 +17,24 @@ class HashDecoder:
         self._dictionary = dictionary
 
     def decode(self, hash_: _types.hash_type,
-               hint: _typing.Optional[str] = None) -> str:
+               hint: _types.hint_type = None) -> str:
         return self._decode(hash_, _combinations.combinations, hint)
 
     def _decode(self, hash_: _types.hash_type,
                 get_combinations: _typing.Callable,
-                hint: _typing.Optional[str] = None) -> str:
+                hint: _types.hint_type = None) -> str:
         lookup = self._lookup(hash_)
         if lookup:
             return lookup
 
         _log.debug("Decoding %s (hint: %s)", hash_, hint)
 
-        valid_chars = list(hint.replace(' ', '') if hint else [])
-        valid_chars = sorted(valid_chars)
+        valid_chars = _sanitise_hint(hint)
 
-        total_word_count = self._dictionary.count_words()
+        total_word_count = self._dictionary.count_initial_words()
 
         for index, permutation in enumerate(get_combinations(
-                self._dictionary.yield_words,
+                self._dictionary.yield_all,
                 total_word_count
         )):
             _logutil.throttled_log(_log.info, 'Processing permutation %s: %s',
@@ -58,3 +57,8 @@ class HashDecoder:
             _log.debug("Found hash '%s' in %s, maps to '%s'",
                        hash_, self._dictionary, word)
         return word
+
+
+def _sanitise_hint(hint: _types.hint_type) -> _typing.List[str]:
+    valid_chars = list(hint.replace(' ', '') if hint else [])
+    return sorted(valid_chars)

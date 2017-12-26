@@ -20,7 +20,7 @@ ParsedArgs = NewType('ParsedArgs', namedtuple('ParsedArgs', [
 ]))
 
 
-def parse_args() -> ParsedArgs:
+def parse_args(args: list = None) -> ParsedArgs:
     def add_flags(p: _argparse.ArgumentParser, quiet: str = None) -> None:
         if quiet:
             p.add_argument(
@@ -76,16 +76,13 @@ def parse_args() -> ParsedArgs:
 
     hash_parser = cmds_parsers.add_parser(
         CmdType.hash.name, help='hash a word')
-
     hash_parser.add_argument('word', type=str, help='word to hash', nargs='+')
     add_flags(hash_parser)
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if not hasattr(args, 'quiet'):
         setattr(args, 'quiet', False)
-    if not hasattr(args, 'verbosity'):
-        setattr(args, 'verbosity', 0)
     if hasattr(args, 'hint') and args.hint:
         args.hint = ' '.join(args.hint)
     if hasattr(args, 'word'):

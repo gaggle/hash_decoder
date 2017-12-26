@@ -3,7 +3,7 @@ from functools import partial
 from hashdecoder.lib.combinations import combinations
 
 
-def test_combinations_yields_2_as_expected():
+def test_combinations_yields_count_of_2_as_expected():
     get_words = partial(lambda: iter(['a', 'b']))
     ideal = ['a b', 'b a']
     _assert_generator_contains(
@@ -12,7 +12,7 @@ def test_combinations_yields_2_as_expected():
     )
 
 
-def test_combinations_yields_3_as_expected():
+def test_combinations_yields_count_of_3_as_expected():
     get_words = partial(lambda: iter(['a', 'b', 'c']))
     ideal = [
         'a b', 'a c',

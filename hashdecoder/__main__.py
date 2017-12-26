@@ -25,7 +25,7 @@ def _configure_logging(verbosity: int) -> None:
 
 def _get_dictionary() -> _dictionary.DBDictionary:
     dictionary = _dictionary.DBDictionary(db)
-    words = dictionary.count_words()
+    words = dictionary.count_initial_words()
     permutations = dictionary.count_permutations()
     log.debug(
         "Dictionary contains %s words, %s permutations, total %s entries",
@@ -41,7 +41,7 @@ def process_db(dictionary, args: _parse_args.ParsedArgs) -> None:
         return
 
     if args.db_cmd == _parse_args.DBCmdType.count.name:
-        words = dictionary.count_words()
+        words = dictionary.count_initial_words()
         permutations = dictionary.count_permutations()
         total = words + permutations
         print(
@@ -56,7 +56,7 @@ def process_db(dictionary, args: _parse_args.ParsedArgs) -> None:
         def add_word(index, word):
             _logutil.throttled_log(log.info, 'Adding %sth word: %s', index,
                                    word)
-            dictionary.add_word(word, args.hint)
+            dictionary.add_initial_word(word, args.hint)
 
         [add_word(i, w.strip())
          for i, w in enumerate(args.wordlist.readlines())]
