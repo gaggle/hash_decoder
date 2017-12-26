@@ -1,5 +1,5 @@
-from functools import partial
 from logging import getLogger as _getLogger
+from time import time
 from typing import Callable, Optional, TYPE_CHECKING as _TYPE_CHECKING
 
 from hashdecoder.exc import HashDecodeError as _HashDecodeError
@@ -33,16 +33,36 @@ class HashDecoder:
 
         _log.debug("Decoding %s (hint: %s)", hash_, hint)
 
-        yield_words = partial(self._dictionary.yield_words, hint=hint)
-        for permutation in get_combinations(yield_words,
-                                            self._dictionary.count_words()):
+        valid_chars = list(hint.replace(' ', '') or [])
+        # valid_chars.append(' ')
+        valid_chars = sorted(valid_chars)
 
+        skipped_entries = 0
+        total_word_count = self._dictionary.count_words()
+
+        loop_start = -1
+
+        def log_every_nth(i, word):
+            nonlocal loop_start
+            elapsed_time = time() - loop_start
+            if elapsed_time > 1:
+                _log_same_line("Processing permutation %s: %s",
+                               i, word)
+                loop_start = time()
+
+        for index, permutation in enumerate(get_combinations(
+                self._dictionary.yield_words,
+                total_word_count
+        )):
             _log_switch(
                 _log,
-                info=lambda: _log_same_line("Processing word: %s", permutation),
-                debug=lambda: _log.debug("Processing permutation: %s",
-                                         permutation),
+                info=lambda: log_every_nth(index, permutation),
+                debug=lambda: _log.debug("Processing permutation %s: %s",
+                                         index, permutation),
             )
+            permutation_letters = sorted(permutation.replace(' ', ''))
+            if not permutation_letters == valid_chars:
+                continue
             self._dictionary.add_permutation(permutation)
             lookup = self._lookup(hash_)
             if lookup:

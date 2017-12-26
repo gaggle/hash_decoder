@@ -149,7 +149,8 @@ def process_db(args: 'Namespace') -> None:
 
         def filtered_line_entries():
             for entry in file.readlines():
-                if any((c in valid_chars) for c in entry):
+                entry = entry.strip()
+                if all((c in valid_chars) for c in entry):
                     yield entry
 
         print_progress(filtered_line_entries(),

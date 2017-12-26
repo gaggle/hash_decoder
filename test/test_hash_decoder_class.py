@@ -1,5 +1,8 @@
 from hashlib import md5
 
+from pytest import raises
+
+from hashdecoder.exc import HashDecodeError
 from hashdecoder.lib.decoder import HashDecoder
 from hashdecoder.lib.dictionary import MemDictionary
 
@@ -29,3 +32,17 @@ def test_saves_permutations_to_dictionary():
     HashDecoder(dictionary).decode(to_md5('a b c'))
     assert 'a b c' in dictionary.yield_all()
     assert 'a b c' not in dictionary.yield_words()
+
+
+def test_decode_simple_hint():
+    dictionary = MemDictionary(['a', 'b', 'c'])
+    with raises(HashDecodeError):
+        HashDecoder(dictionary).decode(to_md5('xyz'), hint='bc')
+    assert 2 == dictionary.count_permutations()
+
+
+def test_decode_hint():
+    dictionary = MemDictionary(['foo', 'bar', 'baz'])
+    result = HashDecoder(dictionary).decode(to_md5('baz bar'), hint='aabbrz')
+    assert 'baz bar' in result
+    assert 2 == dictionary.count_permutations()
