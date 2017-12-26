@@ -1,6 +1,7 @@
 # hash decoder
 [![Build Status](https://travis-ci.org/gaggle/hash_decoder.svg?branch=master)](https://travis-ci.org/gaggle/hash_decoder)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/a38a3b93be1611bb6a76/test_coverage)](https://codeclimate.com/github/gaggle/hash_decoder/test_coverage)
+[![codecov](https://codecov.io/gh/gaggle/hash_decoder/branch/master/graph/badge.svg)](https://codecov.io/gh/gaggle/hash_decoder)
+[![Maintainability](https://api.codeclimate.com/v1/badges/a38a3b93be1611bb6a76/maintainability)](https://codeclimate.com/github/gaggle/hash_decoder/maintainability)
 [![Known Vulnerabilities](https://snyk.io/test/github/gaggle/hash_decoder/badge.svg)](https://snyk.io/test/github/gaggle/hash_decoder)
 
 Simple hash decoder experiment
