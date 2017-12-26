@@ -26,15 +26,14 @@ class HashDecoder:
         return self._decode(hash_, _combinations, hint)
 
     def _decode(self, hash_: hash_type, get_combinations: Callable,
-                hint: Optional[str] = None):
+                hint: Optional[str] = None) -> str:
         lookup = self._lookup(hash_)
         if lookup:
             return lookup
 
         _log.debug("Decoding %s (hint: %s)", hash_, hint)
 
-        valid_chars = list(hint.replace(' ', '') or [])
-        # valid_chars.append(' ')
+        valid_chars = list(hint.replace(' ', '') if hint else [])
         valid_chars = sorted(valid_chars)
 
         skipped_entries = 0
@@ -60,9 +59,10 @@ class HashDecoder:
                 debug=lambda: _log.debug("Processing permutation %s: %s",
                                          index, permutation),
             )
-            permutation_letters = sorted(permutation.replace(' ', ''))
-            if not permutation_letters == valid_chars:
-                continue
+            if valid_chars:
+                permutation_letters = sorted(permutation.replace(' ', ''))
+                if not permutation_letters == valid_chars:
+                    continue
             self._dictionary.add_permutation(permutation)
             lookup = self._lookup(hash_)
             if lookup:
