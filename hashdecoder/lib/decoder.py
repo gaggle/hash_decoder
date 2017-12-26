@@ -35,8 +35,8 @@ class HashDecoder:
                 self._dictionary.yield_all,
                 total_word_count
         )):
-            _log.debug("Processing permutation %s: %s",
-                       index, permutation)
+            # _log.debug("Processing permutation %s: %s",
+            #            index, permutation)
             if valid_chars:
                 permutation_letters = ''.join(permutation)
                 if not len(permutation_letters) == len(valid_chars):
