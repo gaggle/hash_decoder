@@ -1,119 +1,58 @@
-import functools
-from contextlib import contextmanager
-from inspect import currentframe, getouterframes
-from logging import DEBUG, INFO, getLogger
-from shutil import get_terminal_size
-from sys import stdout
-from typing import Any, Callable, Iterator, TYPE_CHECKING
+import datetime as _datetime
+import functools as _functools
+import inspect as _inspect
+import logging as _logging
+import typing as _typing
 
-if TYPE_CHECKING:
-    import logging
-
-log = getLogger(__name__)
+_log = _logging.getLogger(__name__)
 
 
-@contextmanager
-def log_ctx(msg: str, *args: Any,
-            quiet: bool = False,
-            verbose: bool = False) -> Iterator:
-    if quiet:
-        yield
-    elif verbose:
-        print(msg % args)
-        yield
-    else:
-        print(msg % args + '... ', end='')
-        stdout.flush()
-        try:
-            yield
-        except Exception:
-            print("ERROR")
-            raise
-        else:
-            print('OK')
+def _throttle(seconds):
+    throttle_period = _datetime.timedelta(seconds=seconds)
+
+    def throttle_decorator(fn):
+        time_of_last_call = _datetime.datetime.min
+
+        @_functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            nonlocal time_of_last_call
+            now = _datetime.datetime.now()
+            if now - time_of_last_call > throttle_period:
+                time_of_last_call = now
+                return fn(*args, **kwargs)
+
+        return wrapper
+
+    return throttle_decorator
 
 
-_LOG_MAX_LENGTH: dict = {}
+def log_entry_and_exit(log_callable: _typing.Callable):
+    """Log entry and exit of the decorated function"""
 
+    def decorator(inner):
 
-def log_same_line(msg: str, *args: Any) -> None:
-    full_msg = msg % args
-    if len(full_msg) > _LOG_MAX_LENGTH.get(None, 0):
-        _LOG_MAX_LENGTH[None] = len(full_msg)
+        @_functools.wraps(inner)
+        def wrapped(*args, **kwargs):
+            log_callable('enter %s', inner.__name__)
+            try:
+                r = inner(*args, **kwargs)
+            except Exception as ex:
+                log_callable('exit %s with error: %s', inner.__name__, ex)
+                raise
+            else:
+                log_callable('exit %s', inner.__name__)
+            return r
 
-    max_length = _LOG_MAX_LENGTH[None]
-    padding = max_length - len(full_msg)
-    if padding > 0:
-        full_msg = full_msg + " " * padding
-    print(full_msg, end="\r")
+        return wrapped
 
-
-def log_switch(logger: 'logging.Logger',
-               debug: Callable,
-               info: Callable) -> None:
-    if logger.isEnabledFor(DEBUG):
-        return debug()
-    if logger.isEnabledFor(INFO):
-        return info()
-
-
-AUTO = ''
-
-
-def print_progress(content: Iterator, apply_to: Callable, end_val: int,
-                   prefix='Percent', bar_length: int = AUTO):
-    max_length = 0
-    max_allowed_length = 40
-
-    if bar_length is AUTO:
-        width, height = get_terminal_size((80, 20))
-        bar_length = width - (len(prefix) + max_allowed_length)
-
-    def to_display(el):
-        nonlocal max_length
-        el_for_print = el.replace('\n', '')
-
-        if len(el) > max_allowed_length:
-            el = el[:max_allowed_length]
-
-        if len(el) > max_length:
-            max_length = len(el)
-        padding = max_length - len(el)
-        if padding > 0:
-            el_for_print = el_for_print + ' ' * padding
-        return el_for_print
-
-    def calc_percentage_bar():
-        percent_ = float(i) / end_val
-        raw_hashes = '#' * int(round(percent_ * bar_length))
-        hashes_ = raw_hashes + ' ' * (bar_length - len(raw_hashes))
-        percent_ = int(round(percent_ * 100))
-        return hashes_, percent_
-
-    for i, e in enumerate(content):
-        apply_to(e)
-        element = to_display(e)
-        hashes, percent = calc_percentage_bar()
-        print(
-            "\r{prefix}: [{hashes}] "
-            "{percent}%: {element}".format(**locals()),
-            end=''
-        )
-    print('')
+    return decorator
 
 
 def whoami():
-    return getouterframes(currentframe())[1].function
+    return _inspect.getouterframes(_inspect.currentframe())[1].function
 
 
-def log_me(inner):
-    @functools.wraps(inner)
-    def wrapped(*args, **kwargs):
-        log.debug('enter %s', inner.__name__)
-        try:
-            r = inner(*args, **kwargs)
-        finally:
-            log.debug('exit %s', inner.__name__)
-        return r
-
-    return wrapped
+@_throttle(1)
+def throttled_log(log_callable: _typing.Callable, msg: str,
+                  *args: _typing.Any, **kwargs: _typing.Any):
+    return log_callable(msg, *args, **kwargs)
