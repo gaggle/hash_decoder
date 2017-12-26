@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+printf "    $ python -m hashdecoder --help\n\n" > CLI.md
+python -m hashdecoder --help | sed 's/^/    /' >> CLI.md
+
+printf "\n---\n\n" >> CLI.md
+
+printf "    $ python -m hashdecoder db --help\n\n" >> CLI.md
+python -m hashdecoder db --help | sed 's/^/    /' >> CLI.md
+
+printf "\n---\n\n" >> CLI.md
+
+printf "    $ python -m hashdecoder decode --help\n\n" >> CLI.md
+python -m hashdecoder decode --help | sed 's/^/    /' >> CLI.md
+
+printf "\n---\n\n" >> CLI.md
+
+printf "    $ python -m hashdecoder hash --help\n\n" >> CLI.md
+python -m hashdecoder hash --help | sed 's/^/    /' >> CLI.md
