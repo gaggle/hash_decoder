@@ -2,6 +2,9 @@ language: python
 python:
   - "3.6"
 install:
+  - pip install codecov
   - pip install -r requirements.txt -r test-requirements.txt
 script:
-  - pytest
+  - py.test --cov=hashdecoder
+after_success:
+  - codecov
