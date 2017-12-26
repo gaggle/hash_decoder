@@ -3,7 +3,6 @@ import typing as _typing
 
 import hashdecoder.exc as _exceptions
 import hashdecoder.lib.combinations as _combinations
-import hashdecoder.lib.logutil as _logutil
 import hashdecoder.lib.types as _types
 
 _log = _logging.getLogger(__name__)
@@ -27,18 +26,15 @@ class HashDecoder:
         if lookup:
             return lookup
 
-        _log.debug("Decoding %s (hint: %s)", hash_, hint)
-
         valid_chars = _sanitise_hint(hint)
 
         total_word_count = self._dictionary.count_initial_words()
 
+        _log.info("Decoding %s (hint: %s)", hash_, hint)
         for index, permutation in enumerate(get_combinations(
                 self._dictionary.yield_all,
                 total_word_count
         )):
-            _logutil.throttled_log(_log.info, 'Processing permutation %s: %s',
-                                   index, permutation)
             _log.debug("Processing permutation %s: %s",
                        index, permutation)
             if valid_chars:

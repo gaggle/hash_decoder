@@ -54,8 +54,8 @@ def process_db(dictionary, args: _parse_args.ParsedArgs) -> None:
 
     if args.db_cmd == _parse_args.DBCmdType.load.name:
         def add_word(index, word):
-            _logutil.throttled_log(log.info, 'Adding %sth word: %s', index,
-                                   word)
+            _logutil.throttled_log(
+                log.info, 'Adding %sth word: %s', index, word)
             dictionary.add_initial_word(word, args.hint)
 
         [add_word(i, w.strip())
