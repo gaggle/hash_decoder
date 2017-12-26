@@ -1,78 +1,109 @@
-import logging
-from argparse import ArgumentError, ArgumentParser
-from functools import partial
-from os import path
-from typing import TYPE_CHECKING
+import functools as _functools
+import logging as _logging
+import sqlite3 as _sqlite3
 
-from hashdecoder import logutil
-from hashdecoder.decoder import HashDecoder
-from hashdecoder.dictionary import DictionaryImpl
-from hashdecoder.word_repository import FilePathWordRepository
+import hashdecoder.exc as _exceptions
+import hashdecoder.lib.decoder as _decoder
+import hashdecoder.lib.dictionary as _dictionary
+import hashdecoder.lib.hashutil as _hashutil
+import hashdecoder.lib.logutil as _logutil
+import hashdecoder.lib.parse_args as _parse_args
 
-if TYPE_CHECKING:
-    from argparse import Namespace
-
-log = logging.getLogger(__name__)
+log = _logging.getLogger(__name__)
 
 
-def _parse_args() -> Namespace:
-    def wordlist(raw_path: str) -> str:
-        abspath = path.abspath(raw_path)
-        if not path.isfile(abspath):
-            raise ArgumentError("Not a valid file")
-        return abspath
-
-    parser = ArgumentParser()
-    parser.add_argument("hash", help="hash to decode")
-    parser.add_argument(
-        "-w", "--wordlist",
-        default="wordlist.dms",
-        help="path to new-line delimited list of word list",
-        type=wordlist,
-    )
-    parser.add_argument(
-        "-q", "--quiet",
-        action="store_true",
-        help="only display decoded hash",
-    )
-    parser.add_argument(
-        '-v', '--verbosity',
-        action="count",
-        default=0,
-        help="increase output verbosity",
-    )
-    return parser.parse_args()
+def _configure_logging(verbosity: int) -> None:
+    if verbosity > 1:
+        _logging.basicConfig(level=_logging.DEBUG)
+    elif verbosity > 0:
+        _logging.basicConfig(level=_logging.INFO)
+    else:
+        _logging.basicConfig()
+    log.debug("Log level set to: %s",
+              _logging.getLevelName(log.getEffectiveLevel()))
 
 
-vargs = _parse_args()
+def _get_dictionary(db: _sqlite3.Connection) -> '_dictionary.Dictionary':
+    dictionary = _dictionary.get_db_dictionary(db)
+    words = dictionary.count_initial_words()
+    permutations = dictionary.count_permutations()
+    log.debug(
+        "Dictionary contains %s words, %s permutations, total %s entries",
+        words, permutations, words + permutations)
+    return dictionary
 
-log_ctx = partial(logutil.log_ctx, quiet=vargs.quiet, verbose=vargs.verbosity)
 
-if vargs.verbosity > 1:
-    logging.basicConfig(level=logging.DEBUG)
-elif vargs.verbosity > 0:
-    logging.basicConfig(level=logging.INFO)
-else:
-    logging.basicConfig()
+@_logutil.log_entry_and_exit(log.debug)
+def process_db(dictionary, args: _parse_args.ParsedArgs) -> None:
+    if args.db_cmd == _parse_args.DBCmdType.wipe.name:
+        input("About to wipe database, press Enter to continue...")
+        dictionary.clear()
+        return
 
-log.debug("Log level set to: %s",
-          logging.getLevelName(log.getEffectiveLevel()))
-
-try:
-    with log_ctx("Initialising decoder"):
-        decoder = HashDecoder(
-            DictionaryImpl(
-                FilePathWordRepository(vargs.wordlist)
-            )
+    if args.db_cmd == _parse_args.DBCmdType.count.name:
+        words = dictionary.count_initial_words()
+        permutations = dictionary.count_permutations()
+        total = words + permutations
+        print(
+            "Dictionary contains {words} words, "
+            "{permutations} permutations, "
+            "total {total} entries".format(
+                **locals())
         )
+        return
 
-    with log_ctx("Decoding hash %s", vargs.hash):
-        decoded_hash = decoder.decode(vargs.hash)
+    if args.db_cmd == _parse_args.DBCmdType.load.name:
+        def add_word(index, word):
+            _logutil.throttled_log(
+                log.info, 'Adding %sth word: %s', index, word)
+            dictionary.add_initial_word(word, args.hint)
 
-    if vargs.quiet:
+        [add_word(i, w.strip())
+         for i, w in enumerate(args.wordlist.readlines())]
+
+
+@_logutil.log_entry_and_exit(log.debug)
+def process_decode(dictionary, args: _parse_args.ParsedArgs) -> None:
+    log.info('Initialising decoder')
+    decoder = _decoder.HashDecoder(dictionary)
+
+    log.info('Decoding hash %s', args.hash)
+    decoded_hash = decoder.decode(args.hash, hint=args.hint)
+
+    if args.quiet:
         print(decoded_hash)
     else:
-        print("Decoded hash {} to: {}".format(vargs.hash, decoded_hash))
-except KeyboardInterrupt as ex:
-    print("Quit")
-    exit(1)
+        print("Decoded hash to: {}".format(decoded_hash))
+
+
+@_logutil.log_entry_and_exit(log.debug)
+def process_hash(args: _parse_args.ParsedArgs) -> None:
+    print(_hashutil.md5_encode(args.word))
+
+
+def main(args: _parse_args.ParsedArgs):
+    db = _sqlite3.connect('db.sqlite')
+    dictionary = _get_dictionary(db)
+    try:
+        _processors = {
+            _parse_args.CmdType.db: _functools.partial(process_db, dictionary),
+            _parse_args.CmdType.decode: _functools.partial(process_decode,
+                                                           dictionary),
+            _parse_args.CmdType.hash: process_hash,
+        }
+        cmd = _processors[_parse_args.CmdType[args.cmd]]
+        cmd(args)
+    except KeyboardInterrupt:
+        print("Exiting")
+        exit(2)
+    except _exceptions.HashDecodeError as ex:
+        print(ex)
+        exit(1)
+    finally:
+        db.close()
+
+
+if __name__ == '__main__':
+    vargs = _parse_args.parse_args()
+    _configure_logging(vargs.verbosity)
+    main(vargs)
