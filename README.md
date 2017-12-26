@@ -1,4 +1,6 @@
-# hash_decoder
+# hash decoder
+[![Build Status](https://travis-ci.org/gaggle/hash_decoder.svg?branch=master)](https://travis-ci.org/gaggle/hash_decoder)
+
 Simple hash decoder experiment
 
 Use the `--hint` option to reduce the search-space. 
