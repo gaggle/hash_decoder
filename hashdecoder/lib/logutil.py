@@ -47,7 +47,7 @@ def log_entry_and_exit(log_callable: _typing.Callable):
     return decorator
 
 
-@_throttle(1)
+@_throttle(2)
 def throttled_log(log_callable: _typing.Callable, msg: str,
                   *args: _typing.Any, **kwargs: _typing.Any):
     return log_callable(msg, *args, **kwargs)

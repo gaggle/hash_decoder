@@ -23,8 +23,8 @@ def _configure_logging(verbosity: int) -> None:
               _logging.getLevelName(log.getEffectiveLevel()))
 
 
-def _get_dictionary() -> _dictionary.DBDictionary:
-    dictionary = _dictionary.DBDictionary(db)
+def _get_dictionary(db: _sqlite3.Connection) -> '_dictionary.Dictionary':
+    dictionary = _dictionary.get_db_dictionary(db)
     words = dictionary.count_initial_words()
     permutations = dictionary.count_permutations()
     log.debug(
@@ -37,7 +37,7 @@ def _get_dictionary() -> _dictionary.DBDictionary:
 def process_db(dictionary, args: _parse_args.ParsedArgs) -> None:
     if args.db_cmd == _parse_args.DBCmdType.wipe.name:
         input("About to wipe database, press Enter to continue...")
-        dictionary.drop()
+        dictionary.clear()
         return
 
     if args.db_cmd == _parse_args.DBCmdType.count.name:
@@ -82,15 +82,15 @@ def process_hash(args: _parse_args.ParsedArgs) -> None:
 
 
 def main(args: _parse_args.ParsedArgs):
-    dictionary = _get_dictionary()
-    _processors = {
-        _parse_args.CmdType.db: _functools.partial(process_db, dictionary),
-        _parse_args.CmdType.decode: _functools.partial(process_decode,
-                                                       dictionary),
-        _parse_args.CmdType.hash: process_hash,
-    }
-
+    db = _sqlite3.connect('db.sqlite')
+    dictionary = _get_dictionary(db)
     try:
+        _processors = {
+            _parse_args.CmdType.db: _functools.partial(process_db, dictionary),
+            _parse_args.CmdType.decode: _functools.partial(process_decode,
+                                                           dictionary),
+            _parse_args.CmdType.hash: process_hash,
+        }
         cmd = _processors[_parse_args.CmdType[args.cmd]]
         cmd(args)
     except KeyboardInterrupt:
@@ -99,14 +99,11 @@ def main(args: _parse_args.ParsedArgs):
     except _exceptions.HashDecodeError as ex:
         print(ex)
         exit(1)
+    finally:
+        db.close()
 
 
 if __name__ == '__main__':
     vargs = _parse_args.parse_args()
     _configure_logging(vargs.verbosity)
-
-    db = _sqlite3.connect('db.sqlite')
-    try:
-        main(vargs)
-    finally:
-        db.close()
+    main(vargs)

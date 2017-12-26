@@ -42,10 +42,12 @@ class HashDecoder:
             _log.debug("Processing permutation %s: %s",
                        index, permutation)
             if valid_chars:
-                permutation_letters = sorted(permutation.replace(' ', ''))
-                if not permutation_letters == valid_chars:
+                permutation_letters = ''.join(permutation)
+                if not len(permutation_letters) == len(valid_chars):
                     continue
-            self._dictionary.add_permutation(permutation)
+                if not sorted(permutation_letters) == valid_chars:
+                    continue
+            self._dictionary.add_permutation(' '.join(permutation))
             lookup = self._lookup(hash_)
             if lookup:
                 return lookup

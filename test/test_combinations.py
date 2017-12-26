@@ -31,5 +31,5 @@ def test_combinations_yields_count_of_3_as_expected():
 def _assert_generator_contains(iterable, ideal):
     ideal_copy = ideal.copy()
     for entry in iterable:
-        ideal_copy.remove(entry)
+        ideal_copy.remove(' '.join(entry))
     assert ideal_copy == []

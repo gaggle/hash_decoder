@@ -10,4 +10,4 @@ def combinations(get_iterable: _typing.Callable[[], _typing.Iterable],
     _log.debug('Generating permutations up to length %s', count)
     for length in range(2, count + 1):
         for e in _itertools.permutations(get_iterable(), length):
-            yield " ".join(e)
+            yield e
